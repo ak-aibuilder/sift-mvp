@@ -114,3 +114,55 @@ ${formatReviewsForPrompt(reviews)}
 Respond with the JSON object only.`;
   return { system: SUMMARY_SYSTEM, user };
 }
+
+// -- RAG Q&A prompt --
+//
+// Maps to FM-4 (over-generalization from thin evidence): the answer must stay
+// proportional to how many reviews actually support it.
+
+export interface QaResult {
+  answer: string;
+  cited_reviews: number[]; // 1-based indices of the retrieved reviews actually used
+}
+
+const QA_SYSTEM = `You answer a shopper's question about a product using ONLY the customer reviews provided to you. You are grounded and honest about how much evidence exists.
+
+Hard rules:
+1. ANSWER ONLY FROM THE PROVIDED REVIEWS. Never use outside knowledge or assumptions about the product. If the reviews don't address the question, say so plainly.
+2. COUNT ONLY EXPLICIT MENTIONS. When you say how many reviewers mention something, count ONLY reviews that EXPLICITLY address the specific topic asked. A review that is merely related does NOT count: e.g. a review praising general gentleness or "gentle on gums" does NOT count as addressing "sensitive teeth" specifically. State the exact number when it is small ("one reviewer", "two reviewers"). If exactly one review explicitly addresses the topic, say "one reviewer" — never "multiple reviewers". If reviews only touch the topic indirectly, say so ("no review directly addresses X, though one mentions the related Y").
+3. STAY PROPORTIONAL / SAY WHEN EVIDENCE IS THIN. Match your wording to how many reviews explicitly support a point — never turn thin evidence into a broad claim. If fewer than 3 reviews explicitly address the question, state that ("Only a couple of reviews touch on this…").
+4. CITE YOUR SOURCES. In "cited_reviews", list the review numbers you actually used. If none are relevant, return an empty list and say the reviews don't cover it.
+5. Do not invent quotes or details. Summarize faithfully.
+
+Output: a single JSON object: { "answer": string, "cited_reviews": number[] }. Nothing else.`;
+
+function formatRetrievedForPrompt(
+  retrieved: { rating: number; title: string | null; body: string }[],
+  maxBodyChars = 500
+): string {
+  return retrieved
+    .map((r, i) => {
+      const body =
+        r.body.length > maxBodyChars ? r.body.slice(0, maxBodyChars) + '…' : r.body;
+      const title = r.title ? ` — "${r.title}"` : '';
+      return `Review ${i + 1} (${r.rating}★)${title}\n${body}`;
+    })
+    .join('\n\n');
+}
+
+export function buildQaPrompt(
+  question: string,
+  product: { name: string },
+  retrieved: { rating: number; title: string | null; body: string }[]
+): { system: string; user: string } {
+  const user = `Product: ${product.name}
+
+A shopper asks: "${question}"
+
+Below are the ${retrieved.length} most relevant customer reviews (already retrieved for you). Use only these. Some may not actually be relevant — judge for yourself and only cite the ones that genuinely address the question.
+
+${formatRetrievedForPrompt(retrieved)}
+
+Respond with the JSON object only: { "answer": ..., "cited_reviews": [...] }.`;
+  return { system: QA_SYSTEM, user };
+}

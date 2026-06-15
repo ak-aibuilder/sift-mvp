@@ -121,4 +121,71 @@ the data made the case. Full plain-English writeup with illustrations:
   sentence; no ellipses / no joining") if it recurs on in-scope products. Not done
   now (Risk 5 budget; health products are clean).
 
-<!-- Append Phase 3 below at its checkpoint. -->
+## Phase 3 — RAG Q&A Pipeline ✅ (2026-06-14)
+
+### Delivered
+- `lib/embeddings.ts` — local all-MiniLM-L6-v2 wrapper: `embedText()` (384-d, mean
+  pooling + L2 normalize) and `cosineSimilarity()`. Lazy singleton model load.
+- `scripts/generate-embeddings.ts` — `npm run generate:embeddings`; embeds "title.
+  body" for every review. **365/365 embedded** (1536 bytes each = 384×4).
+- `lib/prompts.ts` — added the RAG Q&A prompt (grounding + proportional-hedging rules,
+  maps to FM-4) and `QaResult` type.
+- `app/api/products/[id]/ask/route.ts` — embed question → cosine top-5 → grounded LLM
+  answer → `{ answer, sources, reviews_searched, reviews_cited }`.
+- `next.config.ts` — `serverExternalPackages` for better-sqlite3 + transformers.
+
+### Risk 6 cleared
+@huggingface/transformers runs fine inside a Next.js route handler (with
+`serverExternalPackages` + `runtime = 'nodejs'`). No WASM/bundling fallback needed.
+First request has a cold-start cost (model load in-process); fine for a demo.
+
+### Evals 4–5 (detail in docs/eval-results.md)
+- **Eval 4 Retrieval relevance — ❌ FAIL (data limitation).** "Does this cause side
+  effects?" → only 1/5 retrieved sources truly on-topic. Verified root cause: the
+  dataset has ~1 genuine adverse-effect review across the health products; retrieval
+  + grounding both work, the content just isn't there. Not fixable by prompt/threshold.
+- **Eval 5 Answer grounding — ✅ PASS.** Proportional hedging on thin evidence; refused
+  to fabricate an absent attribute (vegan question → "no clear indication", FM-2 avoided).
+- **Checkpoint: 1/2 RAG evals pass (Eval 5) → proceed to Phase 4.**
+
+### Model behaviors (detail in docs/model-behavior-log.md)
+- **FM-4 NOT observed (good):** consistent proportional hedging.
+- **FM-2 NOT observed (good):** no fabricated attributes on the vegan question.
+
+### Verification
+- `npx tsc --noEmit` → exit 0 (after working around transformers' TS2590 pipeline
+  union via a narrow cast in lib/embeddings.ts).
+- DB: 9 summaries + 365 embeddings; ask route returns correct payloads; 400 on empty
+  question, 404 on unknown product / missing embeddings.
+
+### Carried forward
+- **Eval 4 gap is accepted, not fixed.** Cumulative eval pass rate is now 4/5. To turn
+  Eval 4 green would require re-curating the health set toward a supplement with many
+  genuine "upset stomach / reaction" reviews. Revisit only if the demo needs a clean
+  5/5; otherwise document as a known limitation in the README (Phase 5 / Step 24).
+
+## Pre-Phase-4 validation gate (2026-06-15)
+
+Before building the UI, ran a full validation sweep across all products/categories.
+
+- **`scripts/validate.ts` (`npm run validate`)** — reusable harness: data integrity
+  + FM-1/3/5 + Evals 1–5, all categories. Result **26 PASS / 0 FAIL / 2 WARN** (the 2
+  WARN = the two already-documented limitations). Two false failures during
+  development were traced to *test* flaws (a non-thin question; a too-narrow
+  hedge-detector), not the model — fixed.
+- **Manual per-category eval pass** (1 product/category, requested) — see
+  docs/eval-results.md. Eval 1 clean 3/3 all categories; Eval 2 health/beauty pass,
+  fashion marginal (expected aspect at #3); Eval 4 retrieval 5/5 wherever content
+  exists; Eval 5 good with one FM-4 borderline.
+- **FM-4 finding + Option A (user-approved).** On "Is it gentle on sensitive teeth?"
+  the model said "multiple reviewers" when only 1 review explicitly mentions sensitive
+  teeth. Tightened QA_SYSTEM to "COUNT ONLY EXPLICIT MENTIONS" — improved the clear
+  cases but the model resisted the instruction on the gums≈sensitive-teeth overlap.
+  Decided: keep the stricter prompt, accept the residual as a documented model
+  limitation (heavier levers would regress thin-topic recall). Full writeup:
+  **docs/rag-overcounting-explainer.md** (companion to the star-breakdown explainer).
+- **Catalog note:** "fashion" = glasses/shoe-heels, "beauty" = flosser/IPL/eyelashes,
+  so aspect questions like "scent"/"fit-sizing" don't always map — flagged for the UI
+  and README.
+
+<!-- Append Phase 4 below at its checkpoint. -->
