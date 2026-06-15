@@ -140,6 +140,26 @@ with the matching FM when applicable.
   spec Risk 5 (don't exceed ~1hr of prompt engineering).
 - **Full writeup with illustrations:** docs/rag-overcounting-explainer.md.
 
+### 2026-06-15 — Phase 4 UI walkthrough: one new RAG behavior, no new summary defects
+- **Phase/Step:** Phase 4 deployment gate (full 9-product walkthrough, rendered UI)
+- **FM:** mild FM-4-adjacent (framing), plus a "nothing new" finding
+- **What happened:** Seeing summaries + RAG answers rendered (vs raw JSON) surfaced
+  ONE new behavior: for a strongly-negative product (Irish Moss, avg 2.6, mostly
+  1-star), asking "What do people like most?" returns weak/negative-leaning content
+  ("strong odor or a fishy taste, but one reviewer finds it helpful…"). The model
+  answers the literal question but has little genuine praise to draw on. Expected
+  given the data; not a fabrication.
+- **Also confirmed (good):** the "count only explicit" fix holds in the production
+  UI ("No review directly addresses the fit for small or narrow faces"). Rendering
+  did NOT expose any new summary defects — quotes, star bars, aspects, sentiment all
+  render consistent with the validated JSON.
+- **Fix / response:** None needed. The "like most" framing is honest given thin
+  positives. Possible future polish: soften the prompt to acknowledge when a product
+  has little positive sentiment. Logged, not blocking.
+- **Engineering note (not a model behavior):** a `next dev` hydration warning was
+  investigated and root-caused to a dev-only Next/Turbopack artifact — production
+  hydrates clean. Recorded in docs/build-log.md.
+
 ### 2026-06-14 — Eval 4 limitation: dataset lacks side-effect reviews (not a retrieval bug)
 - **Phase/Step:** Phase 3, Step 16
 - **FM:** n/a — data limitation, flagged since docs/dataset-readiness.md

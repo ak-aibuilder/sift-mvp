@@ -1,65 +1,63 @@
-import Image from "next/image";
+import Link from "next/link";
+import { getAllProducts } from "@/lib/db";
+import { CATEGORY_LABELS, CATEGORY_BADGE } from "@/lib/display";
+
+// Decision: server components read SQLite directly (no internal HTTP hop). The
+// /api routes stay for the interactive Q&A and any external consumers.
+export const dynamic = "force-dynamic";
+
+function Stars({ rating }: { rating: number }) {
+  const full = Math.round(rating);
+  return (
+    <span className="text-amber-500" aria-label={`${rating} out of 5 stars`}>
+      {"★".repeat(full)}
+      <span className="text-zinc-300">{"★".repeat(5 - full)}</span>
+    </span>
+  );
+}
 
 export default function Home() {
+  const products = getAllProducts();
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div>
+      <section className="mb-8">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Know what buyers think — without reading every review
+        </h1>
+        <p className="mt-2 max-w-2xl text-zinc-600">
+          Pick a product to see a structured summary of its reviews, then ask your own
+          question and get an answer grounded in what real customers wrote.
+        </p>
+      </section>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {products.map((p) => (
+          <Link
+            key={p.id}
+            href={`/products/${p.id}`}
+            className="group flex flex-col rounded-xl border border-zinc-200 bg-white p-5 transition hover:border-zinc-300 hover:shadow-sm"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+            <span
+              className={`mb-3 w-fit rounded-full px-2.5 py-1 text-xs font-medium ${CATEGORY_BADGE[p.category]}`}
+            >
+              {CATEGORY_LABELS[p.category]}
+            </span>
+            <h2 className="line-clamp-3 flex-1 font-medium leading-snug text-zinc-900 group-hover:text-zinc-700">
+              {p.name}
+            </h2>
+            <div className="mt-4 flex items-center justify-between text-sm">
+              <span className="flex items-center gap-1.5">
+                <Stars rating={p.avg_rating ?? 0} />
+                <span className="font-medium text-zinc-700">
+                  {p.avg_rating?.toFixed(1) ?? "—"}
+                </span>
+              </span>
+              <span className="text-zinc-500">{p.review_count} reviews</span>
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

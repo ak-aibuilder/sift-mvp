@@ -188,4 +188,75 @@ Before building the UI, ran a full validation sweep across all products/categori
   so aspect questions like "scent"/"fit-sizing" don't always map — flagged for the UI
   and README.
 
-<!-- Append Phase 4 below at its checkpoint. -->
+## Phase 4 — Frontend + Integration ✅ (2026-06-15)
+
+### Delivered
+- `app/page.tsx` — home product grid (9 cards: category badge, stars, review count).
+- `app/products/[id]/page.tsx` — product detail: overall-sentiment badge + prose,
+  rating-breakdown bars, aspect cards (sentiment dot + mention count + quote).
+- `app/products/[id]/ask-box.tsx` — client Q&A: input + example chips, loading
+  skeleton, grounded answer, cited source reviews (stars + % match).
+- `lib/display.ts` — shared label/color helpers; `app/layout.tsx` — Sift header,
+  "Research Preview" badge, footer disclaimer; `app/globals.css` simplified.
+
+### Design decision
+- Server components read SQLite directly (no internal HTTP hop); the `/api` routes
+  stay for the interactive Q&A and external consumers.
+
+### Verification (this phase was QA, not model-evals — UI doesn't change model behavior)
+- `npx tsc --noEmit` → clean.
+- Render checks: home returns all 9 product links; detail renders summary + star bars
+  with correct widths (Irish Moss 5★=31.6% / 1★=50.9%, matching its real skew).
+- Real-browser walkthrough (gstack browse): home grid, detail page, and the full Q&A
+  flow (clicked an example question → grounded answer + cited sources). **Zero console
+  errors** on every page. 404 works for unknown product IDs.
+- **Regression check: `npm run validate` re-run after the UI work → 26 PASS / 0 FAIL /
+  2 WARN, unchanged.** Phase 4 touched only UI files, so the data/model pipeline is
+  unaffected — now confirmed, not assumed.
+
+### Gaps / honest notes
+- Frontend QA was **manual** (render + browser walkthrough). No automated frontend
+  test suite is committed (no Playwright/RTL tests). Acceptable for a demo; would be
+  the first thing to add for production. The reusable backend gate is `npm run validate`.
+- The Phase-1 "reviewer-name hash" concern is moot: the UI never renders raw reviewer
+  names (Q&A sources show only excerpt + rating + match score).
+- The catalog mismatch (gadgets, not apparel/cosmetics) is visible in the UI — e.g.
+  beauty cards are flossers/IPL, not products with "scent". Note for the README.
+
+### Carried forward (Phase 5)
+- Dockerfile (ship data/sift.db with baked summaries + embeddings).
+- README: setup, provider-swap, and the known limitations (Eval 4 data gap, FM-4
+  over-counting, catalog mismatch).
+- Re-run all 5 evals + `npm run validate` against the deployed URL (Step 23).
+
+## Deployment gate (pre-Phase-5, 2026-06-15)
+
+The big validation gate before deploying. Steps, findings, results — full detail in
+docs/eval-results.md ("Deployment gate" section) and docs/model-behavior-log.md.
+
+1. **Full manual walkthrough — all 9 products.** Drove the live Q&A (same path the UI
+   calls) × 3 questions each = 27 Q&A, plus every detail page. **All HTTP 200, every
+   answer grounded with 5 sources, 0 errors / 0 empty / no dead states / no stuck
+   spinners.** Browser walkthrough (home → detail → Q&A) clean. Screenshots captured
+   for Post 2 (`/tmp/post2-*.png`).
+2. **Cross-category eval sweep — 15/15 pass** on fresh products (IPL / Blue Light /
+   Dentitox): Eval 1 quotes traced 3/3; Eval 2 dominant aspect #1 3/3; Eval 3 star
+   math exact 3/3; Eval 4 retrieval 5/5, 4/5, 5/5 (aspect-present questions); Eval 5
+   hedging 3/3. Eval 4 nuance: passes wherever the aspect exists — the earlier
+   "failure" is specifically the absent side-effects content, re-confirmed.
+3. **Phase 4 model behaviors logged.** One new UI-surfaced RAG behavior (negative
+   product + "what do people like most?" → thin/negative answer); no new summary
+   defects; the explicit-count fix holds in prod. See model-behavior-log 2026-06-15.
+4. **Production build + hydration.** `npm run build` succeeds (TS clean, routes
+   correct). A `next dev` hydration warning was investigated (body/html/input/widths
+   all match SSR; DOM-extra attrs were only browser case-normalization + Next's dev
+   overlay) and confirmed **dev-only**: production (`npm start`) hydrates with zero
+   console errors. Deployed users unaffected.
+5. **Railway env vars** — see below / README. The deployed app needs LLM_BASE_URL,
+   LLM_API_KEY, LLM_MODEL set in the Railway service Variables, or Q&A 500s.
+6. **Regression:** `npm run validate` → 26 PASS / 0 FAIL / 2 WARN, unchanged.
+
+**Gate verdict: GO.** Build is production-clean, evals green across categories, no
+breakage in the walkthrough, all findings documented.
+
+<!-- Append Phase 5 below at its checkpoint. -->

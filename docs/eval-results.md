@@ -19,8 +19,8 @@ Pre-build data readiness for each eval is documented in `docs/dataset-readiness.
 | 1 — Factual fidelity | Every representative_quote traces to a real review | ✅ PASS | 2026-06-14 |
 | 2 — Aspect extraction | Dominant aspect (taste/effectiveness) ranks #1 or #2 | ✅ PASS | 2026-06-14 |
 | 3 — Star-breakdown math | star_breakdown sums to the review count | ✅ PASS | 2026-06-14 |
-| 4 — RAG retrieval relevance | 4/5 returned sources are on-topic | ❌ FAIL (data limit) | 2026-06-14 |
-| 5 — RAG answer grounding | Hedges appropriately on thin (2-review) evidence | ✅ PASS | 2026-06-14 |
+| 4 — RAG retrieval relevance | 4/5 returned sources are on-topic | ✅ PASS where aspect present (5/5, 4/5, 5/5); ❌ only on absent content (side-effects) | 2026-06-15 |
+| 5 — RAG answer grounding | Hedges appropriately on thin (2-review) evidence | ✅ PASS | 2026-06-15 |
 
 **Phase 2 checkpoint:** 3/3 of Evals 1–3 pass → proceed. ✅
 **Phase 3 checkpoint:** 1/2 of Evals 4–5 pass (Eval 5) → proceed. ✅
@@ -132,6 +132,58 @@ Eval 1 clean across all 3 categories. Eval 2 health/beauty pass, fashion margina
 5/5, beauty-applicable 5/5); fails only on missing content. Eval 5 grounding is good,
 with one mild FM-4 borderline. No new defects beyond the two already-logged
 limitations + the FM-4 watch-item.
+
+## Deployment gate — full sweep + walkthrough (2026-06-15)
+
+The pre-deploy validation gate. Steps, findings, results below.
+
+**Eval-sweep products (fresh, to broaden coverage beyond the earlier pass):**
+beauty = IPL Hair Removal; fashion = Blue Light Glasses; health = Dentitox Pro.
+
+### Result: 15/15 checks pass
+
+| Eval | Beauty (IPL) | Fashion (Blue Light) | Health (Dentitox) |
+|---|---|---|---|
+| 1 Factual fidelity | ✅ 3/3 quotes traced | ✅ 3/3 | ✅ 3/3 |
+| 2 Aspect extraction | ✅ effectiveness #1 | ✅ comfort #1 | ✅ effectiveness #1, taste #2 |
+| 3 Star math | ✅ 44/44 exact | ✅ 37/37 exact | ✅ 45/45 exact |
+| 4 RAG retrieval | ✅ 5/5 ("remove hair?") | ✅ 4/5 ("eye strain?") | ✅ 5/5 ("work on teeth/gums?") |
+| 5 RAG grounding | ✅ "one reviewer… dark skin" | ✅ "no review directly addresses small/narrow faces" | ✅ "none directly address value for money" |
+
+**Eval 4 nuance (important):** these are 3/3 because each question targets an aspect
+that EXISTS in the reviews. This is the same retrieval that "failed" Eval 4 earlier
+on health "side effects" — that failure is specifically the absent-content case, not
+a retrieval defect. Confirmed again here: retrieval is strong (scores 0.53–0.74)
+wherever the aspect is present.
+
+**Eval 5 note:** the "count only explicit mentions" prompt fix is visibly working —
+"No review directly addresses the fit for small or narrow faces" / "none directly
+address the value for money."
+
+Combined with the earlier per-category pass (Water Flosser / KANEIJI / Hi-Lyte),
+**6 of 9 products** are now eval-verified across all three categories.
+
+### Full manual walkthrough (all 9 products)
+Drove the live Q&A endpoint (same path the UI calls) for **all 9 products × 3
+questions = 27 Q&A**, plus rendered every detail page.
+- **Every detail page: HTTP 200.** Every Q&A: grounded answer + 5 sources, valid.
+- **0 errors, 0 empty answers, 0 missing sources, no dead states, no infinite spinners.**
+- Browser walkthrough (home → detail → Q&A) via gstack browse: clean.
+- One UI-surfaced observation (logged in model-behavior-log): for strongly-negative
+  products (Irish Moss), "what do people like most?" surfaces weak/negative-leaning
+  content — expected, since few reviewers like it; not a bug.
+
+### Production build + hydration check
+- `npm run build` succeeds (TS clean; routes correct).
+- A React hydration warning seen in `next dev` was investigated and root-caused to a
+  dev-only Next/Turbopack artifact: **production (`npm start`) hydrates with zero
+  console errors.** Real/deployed users unaffected. (See model-behavior-log.)
+- Regression: `npm run validate` → 26 PASS / 0 FAIL / 2 WARN, unchanged.
+
+### Screenshots captured (for Post 2)
+`/tmp/post2-home.png` (grid), `/tmp/post2-detail.png` (Hi-Lyte detail),
+`/tmp/post2-qa.png` (side-effects Q&A — the showcase scenario), plus flosser
+detail/Q&A and Irish Moss detail/Q&A.
 
 ## Run log
 
