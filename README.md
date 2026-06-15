@@ -7,6 +7,8 @@ wrote.** Instead of scrolling reviews, you see the aspects people actually discu
 
 **Live demo:** https://sift-mvp-production.up.railway.app
 
+![Sift home — product grid](docs/screenshots/home.png)
+
 > ⚠️ **Research Preview.** This is a week-1 build that deliberately surfaces where a
 > small model (Llama 3.1 8B) succeeds and fails. See [What works / what doesn't](#what-works--what-doesnt).
 
