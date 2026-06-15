@@ -27,6 +27,87 @@ Next.js 16 (App Router) · SQLite (better-sqlite3) · Llama 3.1 8B via Groq
 (OpenAI-compatible) · local embeddings via `@huggingface/transformers`
 (all-MiniLM-L6-v2). Everything lives in one SQLite file; no external database.
 
+## Architecture
+
+**Core idea:** summaries and review embeddings are **pre-baked at build time** into a
+single SQLite file that ships inside the container. Browsing is therefore pure
+database reads (fast, free). Only the **Q&A** path makes a live LLM call.
+
+### High-level design (HLD)
+
+```mermaid
+flowchart TB
+    subgraph client["Shopper's Browser"]
+        UI["Home grid · Product detail · Q&A box"]
+    end
+    subgraph app["Next.js 16 App — Railway container"]
+        SC["Server Components<br/>(home, product detail)"]
+        AR["API Routes<br/>/api/products · /summary · /ask"]
+    end
+    subgraph data["SQLite · data/sift.db (baked into image)"]
+        TBL["products · reviews<br/>summaries · review_embeddings"]
+    end
+    GROQ["Groq · Llama 3.1 8B<br/>OpenAI-compatible (generation)"]
+    MINI["all-MiniLM-L6-v2<br/>local embeddings (in container)"]
+    BUILD["Build scripts (offline, pre-baked):<br/>curate → seed → summaries → embeddings"]
+
+    UI -->|browse| SC
+    UI -->|ask a question| AR
+    SC -->|read| TBL
+    AR -->|read| TBL
+    AR -->|embed query| MINI
+    AR -->|grounded answer| GROQ
+    BUILD ==>|pre-bakes| TBL
+    BUILD -.->|uses once| GROQ
+    BUILD -.->|uses once| MINI
+```
+
+### Low-level design (LLD)
+
+**1. Build pipeline — how `sift.db` is produced** (run once, offline):
+
+```mermaid
+flowchart LR
+    CUR["curate_reviews.py<br/>Amazon Reviews 2023 (HF mirror)"] --> RJ["data/reviews.json<br/>9 products / 365 reviews"]
+    RJ --> SEED["npm run seed"]
+    SEED --> PR["products + reviews tables"]
+    PR --> GS["npm run generate:summaries"]
+    GS -->|Groq LLM| SUM["summaries<br/>(star_breakdown OVERRIDDEN<br/>with real counts from DB)"]
+    PR --> GE["npm run generate:embeddings"]
+    GE -->|MiniLM, local| EMB["review_embeddings<br/>384-d vectors"]
+    SUM --> DBF[("sift.db<br/>shipped in Docker image")]
+    EMB --> DBF
+```
+
+**2. Runtime — the RAG Q&A request** (`POST /api/products/[id]/ask`):
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as Browser AskBox
+    participant R as ask route
+    participant E as Embeddings MiniLM
+    participant DB as SQLite
+    participant P as Prompts
+    participant L as Groq LLM
+
+    U->>R: POST question
+    R->>E: embedText(question) → 384-d vector
+    R->>DB: getEmbeddingsForProduct(id)
+    R->>R: cosineSimilarity → rank → top 5
+    R->>DB: getReviewsByProduct(id) for top-5 texts
+    R->>P: buildQaPrompt(question, reviews)
+    R->>L: chat(messages, jsonMode)
+    L-->>R: answer + cited_reviews + token usage
+    R->>R: assemble sources + usage, log token_usage line
+    R-->>U: answer, sources, reviews_searched/cited, usage
+    U->>U: render answer + cited sources + token counters
+```
+
+**Browse path** (no LLM): `GET /` → `getAllProducts()` and
+`GET /products/[id]` → `getProductById()` + `getSummary()`, both rendered by Server
+Components reading SQLite directly.
+
 ## Run it locally
 
 **Prerequisites:** Node 20+ and a Groq API key (free at
