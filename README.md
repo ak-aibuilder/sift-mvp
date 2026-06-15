@@ -219,7 +219,8 @@ app/            Next.js routes (home, product detail, /api/*)
 lib/            db, llm client, embeddings, prompts, display helpers
 scripts/        seed, generate-summaries, generate-embeddings, validate, warm
 data/           reviews.json + sift.db (shipped with baked summaries+embeddings)
-docs/           build log, eval results, model-behavior log, explainers
+docs/           build log, eval results, model-behavior log, explainers,
+                token-cost-analysis (dev capex + Groq/OpenAI/Anthropic inference costs)
 curate_reviews.py   dataset curation (Amazon Reviews 2023, HF mirror)
 ```
 
