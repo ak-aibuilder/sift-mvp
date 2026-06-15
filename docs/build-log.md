@@ -280,9 +280,14 @@ breakage in the walkthrough, all findings documented.
   clean. The only unverifiable bit is the Linux native-binary compile — mitigated by
   using the full `node:24` base.
 
-### Remaining (user: Steps 22, 23, 25)
-- Deploy to Railway (env vars already set by user).
-- Run all 5 evals + `npm run validate` against the deployed URL (Step 23).
-- Push, tag `week-01-sift`, post builder's log (Step 25).
+### Deployed + verified (Steps 22-23, 2026-06-15)
+- **Deployed to Railway:** https://sift-mvp-production.up.railway.app — build
+  succeeded (native binaries compiled/prebuilt on the node:24 base), env vars set,
+  embedding model served from the image cache.
+- **Step 23 — all 5 evals run on the live URL** (see docs/eval-results.md "Deployed
+  eval run"): **4/5 pass**, identical to local. Eval 1/2/3 = 3/3; Eval 4 beauty 5/5,
+  fashion 4/5, health side-effects 2/5 (documented data gap); Eval 5 hedging holds in
+  prod ("No review directly addresses … dentures"). Smoke test of all endpoints green.
 
-<!-- Phase 5 close-out (deployed eval results) to be appended after deploy. -->
+### Remaining (user: Step 25)
+- Tag `week-01-sift`, post builder's log. (I can create the tag on request.)

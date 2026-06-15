@@ -185,6 +185,26 @@ questions = 27 Q&A**, plus rendered every detail page.
 `/tmp/post2-qa.png` (side-effects Q&A — the showcase scenario), plus flosser
 detail/Q&A and Irish Moss detail/Q&A.
 
+## Deployed eval run — Step 23 (2026-06-15)
+
+Run against the live Railway URL `https://sift-mvp-production.up.railway.app`
+(not localhost). Products: Water Flosser / Blue Light / Hi-Lyte.
+
+**Smoke test:** GET / 200; GET /api/products → 9; GET summary → correct; POST ask →
+grounded answer with sources. Env vars + pre-cached model confirmed working.
+
+| Eval | Deployed result |
+|---|---|
+| 1 Factual fidelity | ✅ 3/3 quotes traced (vs shipped DB) |
+| 2 Aspect extraction | ✅ 3/3 dominant aspect in top 2 |
+| 3 Star math | ✅ 3/3 sum=count AND matches actual distribution (49/49, 37/37, 32/32) |
+| 4 RAG retrieval | ✅ beauty "leak?" 5/5, fashion "eye strain?" 4/5 · ❌ health "side effects?" 2/5 (documented data gap) |
+| 5 RAG grounding | ✅ dentures (0 rev) → "No review directly addresses…"; night-driving → "Only a couple…"; muscle cramps → borderline "multiple" (cited 2, ~2 real) |
+
+**Result: 4/5 evals pass on the deployed app**, identical to local — Eval 4 is the
+known absent-side-effects-content case. The explicit-count prompt fix is confirmed
+live ("No review directly addresses … dentures"). Deployment verified.
+
 ## Run log
 
 ### Eval 1 — Factual Fidelity

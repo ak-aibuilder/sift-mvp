@@ -5,6 +5,8 @@ trust, and answers your specific questions grounded only in what real reviewers
 wrote.** Instead of scrolling reviews, you see the aspects people actually discuss
 (with real quotes), an honest star breakdown, and a Q&A box that cites its sources.
 
+**Live demo:** https://sift-mvp-production.up.railway.app
+
 > ⚠️ **Research Preview.** This is a week-1 build that deliberately surfaces where a
 > small model (Llama 3.1 8B) succeeds and fails. See [What works / what doesn't](#what-works--what-doesnt).
 
