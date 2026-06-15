@@ -33,6 +33,11 @@ Next.js 16 (App Router) · SQLite (better-sqlite3) · Llama 3.1 8B via Groq
 single SQLite file that ships inside the container. Browsing is therefore pure
 database reads (fast, free). Only the **Q&A** path makes a live LLM call.
 
+> The diagrams below render natively on GitHub. Static PNG fallbacks:
+> [HLD](docs/screenshots/architecture-hld.png) ·
+> [build pipeline](docs/screenshots/architecture-lld-build.png) ·
+> [Q&A sequence](docs/screenshots/architecture-lld-qa-sequence.png).
+
 ### High-level design (HLD)
 
 ```mermaid
@@ -217,3 +222,7 @@ data/           reviews.json + sift.db (shipped with baked summaries+embeddings)
 docs/           build log, eval results, model-behavior log, explainers
 curate_reviews.py   dataset curation (Amazon Reviews 2023, HF mirror)
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE). © 2026 Aditya Kalidindi.
