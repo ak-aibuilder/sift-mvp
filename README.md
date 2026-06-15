@@ -85,6 +85,12 @@ embeddings) and pre-caches the embedding model into the image.
    `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`. Railway injects `PORT` automatically.
 3. Deploy. Verify the product list, a summary, and a Q&A all work on the public URL.
 
+**Token observability.** Each Q&A shows its token usage in the UI (per-answer + a
+running session total) and logs a structured line to stdout that Railway captures:
+`[token_usage] {"op":"qa","product_id":"…","total_tokens":953,…}`. Search
+`token_usage` in the Railway service logs to audit or troubleshoot high-usage
+operations.
+
 ## What works / what doesn't
 
 **Works well:**

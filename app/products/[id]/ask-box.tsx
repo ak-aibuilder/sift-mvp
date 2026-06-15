@@ -8,11 +8,17 @@ interface Source {
   rating: number;
   relevance_score: number;
 }
+interface Usage {
+  prompt_tokens: number | null;
+  completion_tokens: number | null;
+  total_tokens: number;
+}
 interface AskResponse {
   answer: string;
   sources: Source[];
   reviews_searched: number;
   reviews_cited: number;
+  usage: Usage;
 }
 
 const EXAMPLES = [
@@ -26,6 +32,8 @@ export function AskBox({ productId }: { productId: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<AskResponse | null>(null);
+  // Running token total for this page session — ticks up with each question.
+  const [sessionTokens, setSessionTokens] = useState(0);
 
   async function ask(q: string) {
     const trimmed = q.trim();
@@ -42,6 +50,7 @@ export function AskBox({ productId }: { productId: string }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Something went wrong.");
       setResult(data as AskResponse);
+      setSessionTokens((t) => t + (data?.usage?.total_tokens || 0));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -91,6 +100,12 @@ export function AskBox({ productId }: { productId: string }) {
         ))}
       </div>
 
+      {sessionTokens > 0 && (
+        <p className="mt-2 text-xs text-zinc-400">
+          Session usage: <span className="font-medium text-zinc-600 tabular-nums">{sessionTokens.toLocaleString()}</span> tokens
+        </p>
+      )}
+
       {error && (
         <p className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
           {error}
@@ -110,7 +125,10 @@ export function AskBox({ productId }: { productId: string }) {
             <p className="leading-relaxed text-zinc-800">{result.answer}</p>
             <p className="mt-3 text-xs text-zinc-400">
               Searched {result.reviews_searched} reviews · cited{" "}
-              {result.reviews_cited}
+              {result.reviews_cited} ·{" "}
+              <span title={`prompt ${result.usage.prompt_tokens ?? "?"} + completion ${result.usage.completion_tokens ?? "?"}`}>
+                {result.usage.total_tokens.toLocaleString()} tokens
+              </span>
             </p>
           </div>
 

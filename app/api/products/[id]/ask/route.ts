@@ -82,6 +82,12 @@ export async function POST(
   );
 
   let parsed: QaResult;
+  let usage = {
+    prompt_tokens: null as number | null,
+    completion_tokens: null as number | null,
+    total_tokens: 0,
+  };
+  let modelUsed = '';
   try {
     const res = await chat(
       [
@@ -91,6 +97,12 @@ export async function POST(
       { temperature: 0.1, jsonMode: true, maxTokens: 700 }
     );
     parsed = safeParse(res.content);
+    modelUsed = res.model;
+    usage = {
+      prompt_tokens: res.prompt_tokens,
+      completion_tokens: res.completion_tokens,
+      total_tokens: (res.prompt_tokens ?? 0) + (res.completion_tokens ?? 0),
+    };
   } catch (e) {
     const err = e as { message?: string };
     return NextResponse.json(
@@ -111,10 +123,26 @@ export async function POST(
     ? parsed.cited_reviews.filter((n) => Number.isInteger(n) && n >= 1 && n <= retrieved.length)
     : [];
 
+  // Structured token-usage log line. Railway captures stdout — search "token_usage"
+  // in the service logs to find/troubleshoot high-usage operations.
+  console.log(
+    `[token_usage] ${JSON.stringify({
+      op: 'qa',
+      product_id: id,
+      model: modelUsed,
+      prompt_tokens: usage.prompt_tokens,
+      completion_tokens: usage.completion_tokens,
+      total_tokens: usage.total_tokens,
+      sources: sources.length,
+      question: question.slice(0, 200),
+    })}`
+  );
+
   return NextResponse.json({
     answer: parsed.answer ?? '',
     sources,
     reviews_searched: embeddings.length,
     reviews_cited: new Set(cited).size,
+    usage,
   });
 }
