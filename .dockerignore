@@ -1,0 +1,21 @@
+# Rebuilt in the image
+node_modules
+.next
+
+# Never ship: secrets, the 3.5GB raw downloads, VCS, logs, local tooling
+.env.local
+.env*.local
+data/raw
+data/*.db-wal
+data/*.db-shm
+.git
+.gitignore
+*.log
+data_curation.log
+.gstack
+.claude
+
+# Not needed at runtime (keep image lean)
+docs
+*.md
+!README.md

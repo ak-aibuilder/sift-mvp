@@ -259,4 +259,30 @@ docs/eval-results.md ("Deployment gate" section) and docs/model-behavior-log.md.
 **Gate verdict: GO.** Build is production-clean, evals green across categories, no
 breakage in the walkthrough, all findings documented.
 
-<!-- Append Phase 5 below at its checkpoint. -->
+## Phase 5 — Deploy + Ship (in progress, 2026-06-15)
+
+### Delivered (Claude Code: Steps 21, 24)
+- **`Dockerfile`** (Step 21) — single stage on full `node:24` (build toolchain
+  included so better-sqlite3 / onnxruntime compile if a prebuild is missing).
+  Ships `data/sift.db` with baked summaries + embeddings; `npm run warm` pre-caches
+  the all-MiniLM model into the image (Risk 2 mitigation), non-fatal if the build
+  host lacks network. Railway injects `PORT`; `next start` binds to it.
+- **`.dockerignore`** — excludes node_modules, .next, `.env.local` (secret),
+  data/raw, db WAL/shm, .git, docs. Keeps `data/sift.db`.
+- **`scripts/warm-embeddings.ts`** + `npm run warm`.
+- **`README.md`** (Step 24) — 2-sentence pitch, local setup, 3-var provider swap,
+  Railway deploy, and an honest "What works / what doesn't" (star-breakdown
+  fabrication, FM-4 over-counting, Eval 4 data gap, catalog mismatch, SQLite
+  concurrency), linking the explainer docs.
+
+### Verified locally (Docker unavailable here, so Railway builds the image)
+- `npm run build` clean; `npm run warm` caches the model (dim 384); `tsc --noEmit`
+  clean. The only unverifiable bit is the Linux native-binary compile — mitigated by
+  using the full `node:24` base.
+
+### Remaining (user: Steps 22, 23, 25)
+- Deploy to Railway (env vars already set by user).
+- Run all 5 evals + `npm run validate` against the deployed URL (Step 23).
+- Push, tag `week-01-sift`, post builder's log (Step 25).
+
+<!-- Phase 5 close-out (deployed eval results) to be appended after deploy. -->
